@@ -1,6 +1,7 @@
 import pytest
 
-from src.service import create_alert
+from src.db.models import Alert
+from src.db.session import async_session_maker
 from src.workers.tasks import _scan_file_for_threats
 
 TEN_MB_PLUS_ONE = 10 * 1024 * 1024 + 1
@@ -119,12 +120,14 @@ async def test_rename_updates_title(client):
     assert body["id"] == file_id
 
 
-@pytest.mark.xfail(strict=True, reason="FK without cascade")
 async def test_delete_file_with_alerts(client):
     created = await upload_file(client, filename="notes.txt", content=b"hello")
     assert created.status_code == 201, created.text
     file_id = created.json()["id"]
-    await create_alert(file_id, "warning", "needs attention")
+
+    async with async_session_maker() as session:
+        session.add(Alert(file_id=file_id, level="warning", message="needs attention"))
+        await session.commit()
 
     response = await client.delete(f"/files/{file_id}")
 

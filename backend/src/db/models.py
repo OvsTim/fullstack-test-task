@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
@@ -33,13 +33,21 @@ class StoredFile(Base):
         onupdate=func.now(),
         nullable=False,
     )
+    alerts: Mapped[list["Alert"]] = relationship(
+        back_populates="file",
+        cascade="all, delete-orphan",
+    )
 
 
 class Alert(Base):
     __tablename__ = "alerts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    file_id: Mapped[str] = mapped_column(String(36), ForeignKey("files.id"), nullable=False)
+    file_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("files.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     level: Mapped[str] = mapped_column(String(50), nullable=False)
     message: Mapped[str] = mapped_column(String(500), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -47,3 +55,4 @@ class Alert(Base):
         server_default=func.now(),
         nullable=False,
     )
+    file: Mapped["StoredFile"] = relationship(back_populates="alerts")
