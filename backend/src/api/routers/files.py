@@ -6,7 +6,7 @@ from fastapi.responses import StreamingResponse
 from src.api.deps import get_file_service
 from src.schemas.files import FileItem, FileUpdate
 from src.services.file_service import FileService
-from src.workers.tasks import scan_file_for_threats
+from src.workers.tasks import process_uploaded_file
 
 router = APIRouter()
 
@@ -29,14 +29,13 @@ async def create_file_view(
     file: UploadFile = File(...),
     files: FileService = Depends(get_file_service),
 ):
-    content = await file.read()
     file_item = await files.upload(
         title=title,
         filename=file.filename,
         content_type=file.content_type,
-        content=content,
+        stream=file,
     )
-    scan_file_for_threats.delay(file_item.id)
+    process_uploaded_file.delay(file_item.id)
     return file_item
 
 

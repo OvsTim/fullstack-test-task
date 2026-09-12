@@ -59,13 +59,13 @@ backend/src/
 
 ## 3. Рефакторинг бэка — домен
 
-- [ ] Репозитории — единственное место, где `session.execute`
-- [ ] `file_service` — upload / update / delete / download
-- [ ] `storage` — абстракция диска (`save` / `open` / `delete`, со стримом), чтобы потом можно было сунуть S3
-- [ ] scan / metadata / alerting — обычные функции без FastAPI и Celery внутри
-- [ ] Свои ошибки (`FileNotFound`, `EmptyFile` …) → ловятся в API. Из сервисов `HTTPException` не кидаем
-- [ ] При удалении файла — cascade alerts или явное удаление
-- [ ] Relationships в моделях
+- [x] Репозитории — единственное место, где `session.execute`
+- [x] `file_service` — upload / update / delete / download
+- [x] `storage` — абстракция диска (`save` / `open` / `delete`, со стримом), чтобы потом можно было сунуть S3
+- [x] scan / metadata / alerting — обычные функции без FastAPI и Celery внутри
+- [x] Свои ошибки (`FileNotFound`, `EmptyFile` …) → ловятся в API. Из сервисов `HTTPException` не кидаем
+- [x] При удалении файла — cascade alerts или явное удаление
+- [x] Relationships в моделях
 
 Прогнать тесты из пункта 1.
 
@@ -82,12 +82,12 @@ backend/src/
 
 Сейчас: три таски → три сессии → три SELECT одной строки → лишние круги через Redis → metadata читает файл целиком в память. Upload тоже буферит весь файл в RAM API.
 
-- [ ] Одна таска `process_uploaded_file(file_id)` (или явный chain), без трёх ручных `.delay`
-- [ ] Одна сессия, одна транзакция, один SELECT файла
-- [ ] Один проход по файлу: и heuristics, и metadata
-- [ ] Не `read_bytes()` целиком: строки/символы чанками, PDF — искать `/Type /Page` в буфере
-- [ ] Upload стримом: писать чанками, size на лету, лимит до записи в БД
-- [ ] Убрать `run_in_worker_loop` с глобальным loop — это антипаттерн. В worker лучше sync SQLAlchemy, либо loop на задачу / `async_to_sync`
+- [x] Одна таска `process_uploaded_file(file_id)` (или явный chain), без трёх ручных `.delay`
+- [x] Одна сессия, одна транзакция, один SELECT файла
+- [x] Один проход по файлу: и heuristics, и metadata
+- [x] Не `read_bytes()` целиком: строки/символы чанками, PDF — искать `/Type /Page` в буфере
+- [x] Upload стримом: писать чанками, size на лету, лимит до записи в БД
+- [x] Убрать `run_in_worker_loop` с глобальным loop — это антипаттерн. В worker лучше sync SQLAlchemy, либо loop на задачу / `async_to_sync`
 
 Для ревьюера одной фразой: схлопнул три I/O-таски в один pass + streaming upload, файл не держим в памяти дважды.
 

@@ -1,8 +1,8 @@
 import mimetypes
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import BinaryIO
+from typing import BinaryIO, Protocol
 from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +13,12 @@ from src.db.models import StoredFile
 from src.repositories.files import FileRepository
 from src.services.storage import LocalStorage
 
+_CHUNK_SIZE = 64 * 1024
+
+
+class AsyncByteReader(Protocol):
+    async def read(self, size: int = -1) -> bytes: ...
+
 
 @dataclass(slots=True)
 class FileDownload:
@@ -20,7 +26,7 @@ class FileDownload:
     mime_type: str
     filename: str
 
-    def iter_chunks(self, chunk_size: int = 64 * 1024) -> Iterator[bytes]:
+    def iter_chunks(self, chunk_size: int = _CHUNK_SIZE) -> Iterator[bytes]:
         try:
             while True:
                 chunk = self.stream.read(chunk_size)
@@ -56,15 +62,14 @@ class FileService:
         title: str,
         filename: str | None,
         content_type: str | None,
-        content: bytes,
+        stream: AsyncByteReader,
     ) -> StoredFile:
-        if not content:
-            raise EmptyFile
-
         file_id = str(uuid4())
         suffix = Path(filename or "").suffix
         stored_name = f"{file_id}{suffix}"
-        self._storage.save(stored_name, content)
+        size = await self._storage.save_stream(stored_name, _iter_chunks(stream))
+        if size == 0:
+            raise EmptyFile
 
         file_item = StoredFile(
             id=file_id,
@@ -72,7 +77,7 @@ class FileService:
             original_name=filename or stored_name,
             stored_name=stored_name,
             mime_type=content_type or mimetypes.guess_type(stored_name)[0] or "application/octet-stream",
-            size=len(content),
+            size=size,
             processing_status=ProcessingStatus.UPLOADED.value,
         )
         self._files.add(file_item)
@@ -102,3 +107,11 @@ class FileService:
             mime_type=file_item.mime_type,
             filename=file_item.original_name,
         )
+
+
+async def _iter_chunks(stream: AsyncByteReader, chunk_size: int = _CHUNK_SIZE) -> AsyncIterator[bytes]:
+    while True:
+        chunk = await stream.read(chunk_size)
+        if not chunk:
+            break
+        yield chunk

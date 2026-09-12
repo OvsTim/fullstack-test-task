@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from src.core.config import settings
 from src.db.models import Base
-from src.db.session import engine
+from src.db.session import dispose_engine, engine
 
 
 def _admin_url() -> str:
@@ -38,7 +38,7 @@ async def _prepare_database() -> None:
 
 
 async def _dispose_engine() -> None:
-    await engine.dispose()
+    await dispose_engine()
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -53,8 +53,7 @@ async def client(tmp_path, monkeypatch):
     storage = tmp_path / "files"
     storage.mkdir()
     monkeypatch.setattr(settings, "storage_dir", storage)
-    monkeypatch.setattr("src.api.routers.files.scan_file_for_threats.delay", lambda *args, **kwargs: None)
-    monkeypatch.setattr("src.workers.tasks.extract_file_metadata.delay", lambda *args, **kwargs: None)
+    monkeypatch.setattr("src.api.routers.files.process_uploaded_file.delay", lambda *args, **kwargs: None)
 
     async with engine.begin() as conn:
         await conn.execute(text("TRUNCATE alerts, files RESTART IDENTITY CASCADE"))
