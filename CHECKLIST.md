@@ -106,12 +106,12 @@ frontend/src/
   widgets/dashboard
 ```
 
-- [ ] Один api-client: `NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'`
-- [ ] В page нет `fetch` и нет знания URL бэка
-- [ ] Хуки решают «когда грузить», UI — «как показать»
-- [ ] Пока статус `uploaded` / `processing` — короткий polling (2–3 сек), или хотя бы refetch после upload с паузой
-- [ ] В UI добавить rename и delete — API уже умеет, иначе рефакторинг чисто косметический
-- [ ] Починить favicon (`app/icon` или `/favicon.ico`, не `/public/...`)
+- [x] Один api-client: `NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'`
+- [x] В page нет `fetch` и нет знания URL бэка
+- [x] Хуки решают «когда грузить», UI — «как показать»
+- [x] Пока статус `uploaded` / `processing` — короткий polling (2–3 сек), или хотя бы refetch после upload с паузой
+- [x] В UI добавить rename и delete — API уже умеет, иначе рефакторинг чисто косметический
+- [x] Починить favicon (`app/icon` или `/favicon.ico`, не `/public/...`)
 
 ---
 
