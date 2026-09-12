@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 
 from src.core.config import settings
@@ -157,3 +159,60 @@ async def test_delete_file_with_alerts(client):
     assert response.status_code == 204
     missing = await client.get(f"/files/{file_id}")
     assert missing.status_code == 404
+
+    alerts = (await client.get("/alerts")).json()
+    assert [alert for alert in alerts if alert["file_id"] == file_id] == []
+
+
+async def test_download_returns_file_bytes(client):
+    content = b"hello download"
+    created = await upload_file(client, filename="notes.txt", content=content)
+    assert created.status_code == 201, created.text
+    file_id = created.json()["id"]
+
+    response = await client.get(f"/files/{file_id}/download")
+
+    assert response.status_code == 200
+    assert response.content == content
+    assert "notes.txt" in response.headers["content-disposition"]
+
+
+async def test_download_unknown_file_is_404(client):
+    response = await client.get("/files/not-a-real-id/download")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "File not found"
+
+
+async def test_download_missing_on_disk_is_404(client):
+    created = await upload_file(client, filename="notes.txt", content=b"hello")
+    assert created.status_code == 201, created.text
+    file_id = created.json()["id"]
+
+    stored = list(settings.storage_dir.iterdir())
+    assert len(stored) == 1
+    stored[0].unlink()
+
+    response = await client.get(f"/files/{file_id}/download")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Stored file not found"
+
+
+async def test_processing_exception_marks_failed_and_creates_alert(client):
+    created = await upload_file(client, filename="notes.txt", content=b"hello")
+    assert created.status_code == 201, created.text
+    file_id = created.json()["id"]
+
+    with patch("src.services.processing.extract_metadata", side_effect=RuntimeError("boom")):
+        process_uploaded_file(file_id)
+
+    payload = (await client.get(f"/files/{file_id}")).json()
+    assert payload["processing_status"] == "failed"
+    assert payload["scan_status"] == "failed"
+
+    alerts = (await client.get("/alerts")).json()
+    matching = [alert for alert in alerts if alert["file_id"] == file_id]
+    assert len(matching) == 1
+    assert matching[0]["level"] == "critical"
+    assert matching[0]["message"] == "File processing failed"
