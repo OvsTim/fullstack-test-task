@@ -1,15 +1,31 @@
 services:
   backend:
     build: ./backend
-    command: uvicorn src.app:app --host 0.0.0.0 --reload --port 8000
+    command: sh -c "alembic upgrade head && uvicorn src.app:app --host 0.0.0.0 --reload --port 8000"
     container_name: backend
     volumes:
       - ./backend:/backend
+      - file-storage:/backend/storage
     env_file: ".env.dev"
     ports:
       - "8000:8000"
     depends_on:
-      - backend-db
+      backend-db:
+        condition: service_healthy
+      backend-redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/docs')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   backend-worker:
     build: ./backend
@@ -18,21 +34,38 @@ services:
     env_file: ".env.dev"
     volumes:
       - ./backend:/backend
+      - file-storage:/backend/storage
     depends_on:
-      - backend-db
+      backend-db:
+        condition: service_healthy
+      backend-redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
 
   backend-db:
     image: postgres:latest
     container_name: backend-db
     ports:
-      - "5434:5433"
+      - "5434:5432"
     env_file: ".env.dev"
     volumes:
       - backend-db-volume:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   backend-redis:
     image: redis:latest
     container_name: backend-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   frontend:
     build:
@@ -44,3 +77,4 @@ services:
 
 volumes:
   backend-db-volume:
+  file-storage:

@@ -12,7 +12,6 @@
 
 **Запуск:**
 1. ```docker compose -f docker-compose.dev.yml up```
-2. ```docker exec -it backend alembic upgrade head```
 
 
 **Открыть фронт:** ```http://localhost:3000/test``` 

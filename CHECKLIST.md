@@ -6,13 +6,13 @@
 
 ## 0. Поднять систему
 
-- [ ] Починить Postgres: внутри контейнера слушает `5432`, с хоста проброс типа `5433:5432` (или `5434:5432`). В `.env` для бэка — `PGPORT=5432`
-- [ ] Свести имя брокера: в env одно, в коде worker то же самое (`CELERY_BROKER_URL` vs `REDIS_URL`)
-- [ ] Healthcheck для Postgres + `depends_on` с `service_healthy`
-- [ ] Worker зависит от redis
-- [ ] Миграции не руками «когда вспомнил»: entrypoint `alembic upgrade head && uvicorn…` или отдельный migrator
-- [ ] Общий volume на storage между API и worker (сейчас оба смотрят в `./backend` — хрупко)
-- [ ] `compose up` и руками проверить: upload → list → download → alerts
+- [x] Починить Postgres: внутри контейнера слушает `5432`, с хоста проброс типа `5433:5432` (или `5434:5432`). В `.env` для бэка — `PGPORT=5432`
+- [x] Свести имя брокера: в env одно, в коде worker то же самое (`CELERY_BROKER_URL` vs `REDIS_URL`)
+- [x] Healthcheck для Postgres + `depends_on` с `service_healthy`
+- [x] Worker зависит от redis
+- [x] Миграции не руками «когда вспомнил»: entrypoint `alembic upgrade head && uvicorn…` или отдельный migrator
+- [x] Общий volume на storage между API и worker (сейчас оба смотрят в `./backend` — хрупко)
+- [x] `compose up` и руками проверить: upload → list → download → alerts
 
 ---
 

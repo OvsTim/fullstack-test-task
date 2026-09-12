@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from src.models import Alert, StoredFile
 from src.service import STORAGE_DIR, DB_URL
 
-REDIS_URL = os.environ.get("REDIS_URL", "redis://backend-redis:6379/0")
+BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://backend-redis:6379/0")
 _worker_loop: asyncio.AbstractEventLoop | None = None
 
 
@@ -18,7 +18,7 @@ def run_in_worker_loop(coroutine):
     return _worker_loop.run_until_complete(coroutine)
 
 
-celery_app = Celery("file_tasks", broker=REDIS_URL, backend=REDIS_URL)
+celery_app = Celery("file_tasks", broker=BROKER_URL, backend=BROKER_URL)
 engine = create_async_engine(DB_URL)
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
