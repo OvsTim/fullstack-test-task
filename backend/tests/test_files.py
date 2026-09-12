@@ -1,7 +1,7 @@
 import pytest
 
 from src.service import create_alert
-from src.tasks import _scan_file_for_threats
+from src.workers.tasks import _scan_file_for_threats
 
 TEN_MB_PLUS_ONE = 10 * 1024 * 1024 + 1
 

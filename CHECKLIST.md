@@ -33,11 +33,11 @@
 
 Не надо Clean Architecture на 40 файлов. Нормальный modular monolith.
 
-- [ ] `core/config.py` — pydantic-settings, без `os.environ.get` по всему коду
-- [ ] `core/enums.py` — статусы и уровни алертов
-- [ ] `db/session.py` — один engine на процесс, lifespan на create/dispose
-- [ ] `api/deps.py` + роутеры `files` / `alerts` + обработчики ошибок
-- [ ] `main.py` — `create_app()`, lifespan (mkdir storage и всё такое)
+- [x] `core/config.py` — pydantic-settings, без `os.environ.get` по всему коду
+- [x] `core/enums.py` — статусы и уровни алертов
+- [x] `db/session.py` — один engine на процесс, lifespan на create/dispose
+- [x] `api/deps.py` + роутеры `files` / `alerts` + обработчики ошибок
+- [x] `main.py` — `create_app()`, lifespan (mkdir storage и всё такое)
 
 Сигнатуры эндпоинтов пока не меняем.
 

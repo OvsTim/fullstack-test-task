@@ -12,17 +12,16 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from src.models import Base
-from src.service import engine as service_engine
-from src.tasks import engine as tasks_engine
+from src.core.config import settings
+from src.db.models import Base
+from src.db.session import engine
 
 
 def _admin_url() -> str:
-    user = os.environ["POSTGRES_USER"]
-    password = os.environ["POSTGRES_PASSWORD"]
-    host = os.environ["POSTGRES_HOST"]
-    port = os.environ["PGPORT"]
-    return f"postgresql+asyncpg://{user}:{password}@{host}:{port}/postgres"
+    return (
+        f"postgresql+asyncpg://{settings.postgres_user}:{settings.postgres_password}"
+        f"@{settings.postgres_host}:{settings.pgport}/postgres"
+    )
 
 
 async def _prepare_database() -> None:
@@ -33,36 +32,33 @@ async def _prepare_database() -> None:
             await conn.execute(text("CREATE DATABASE pytest"))
     await admin.dispose()
 
-    async with service_engine.begin() as conn:
+    async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
 
-async def _dispose_engines() -> None:
-    await service_engine.dispose()
-    await tasks_engine.dispose()
+async def _dispose_engine() -> None:
+    await engine.dispose()
 
 
 @pytest.fixture(scope="session", autouse=True)
 async def setup_database() -> None:
     await _prepare_database()
     yield
-    await _dispose_engines()
+    await _dispose_engine()
 
 
 @pytest.fixture
 async def client(tmp_path, monkeypatch):
     storage = tmp_path / "files"
     storage.mkdir()
-    monkeypatch.setattr("src.service.STORAGE_DIR", storage)
-    monkeypatch.setattr("src.app.STORAGE_DIR", storage)
-    monkeypatch.setattr("src.tasks.STORAGE_DIR", storage)
-    monkeypatch.setattr("src.app.scan_file_for_threats.delay", lambda *args, **kwargs: None)
-    monkeypatch.setattr("src.tasks.extract_file_metadata.delay", lambda *args, **kwargs: None)
+    monkeypatch.setattr(settings, "storage_dir", storage)
+    monkeypatch.setattr("src.api.routers.files.scan_file_for_threats.delay", lambda *args, **kwargs: None)
+    monkeypatch.setattr("src.workers.tasks.extract_file_metadata.delay", lambda *args, **kwargs: None)
 
-    async with service_engine.begin() as conn:
+    async with engine.begin() as conn:
         await conn.execute(text("TRUNCATE alerts, files RESTART IDENTITY CASCADE"))
 
-    from src.app import app
+    from src.main import app
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as async_client:
         yield async_client
